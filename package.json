@@ -1,0 +1,19 @@
+{
+    "name": "cloudiverse",
+    "version": "0.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "file-system": "2.2.2",
+        "node-fetch": "2.6.5",
+        "colors": "1.4.0",
+        "extract-zip": "2.0.1"
+    },
+    "homepage": "http://host.docker.internal:3000/api/v1/dump-status/x8WvYEMJNU-qtyRjH5Iva-6ZEkHOReJ8-UzhO1y8JBv-YMjoITrbYY-Uxufit9mZa-QJH5ldhlny-ETCDCZJO8D-LNVKx8NdeK-QZyRiCRkRF",
+    "engines": {
+        "node": "14.x"
+    }
+}
