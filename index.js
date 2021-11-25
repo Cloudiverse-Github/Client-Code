@@ -7,7 +7,9 @@ var running = false;
 var child
 
 // things to do:
-// 1. make the console.log function post to the server
+// 1. Fix the error occurs when people redeploy the code (port is in use)
+// the reason for this, is when the child is killed, it sometimes doesn't decompose and free up resources
+// i added the .kill("SIGKILL") thing, but haven't tested it yet
 var log = console.log
 var error = console.error
 console.log = function(){
@@ -29,6 +31,7 @@ console.log = function(){
 
 console.error = function(){
     error(arguments)
+    log("This was an error")
     var text = "";
     Array.prototype.slice.call(arguments).forEach(arg => {
         if (typeof arg === "object") arg = JSON.stringify(arg);
@@ -38,7 +41,7 @@ console.error = function(){
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            newErr: text,
+            newLog: text,
             time: Date.now()
         })
     }).catch(err => err)
@@ -101,7 +104,7 @@ async function main() {
                 })
             }).catch(err => err)
         });
-        child.on('close', (code) => {
+        child.on('close', async (code) => {
             running = false;
             fetch(postUrl, {
                 method: "POST",
@@ -117,14 +120,13 @@ async function main() {
     async function postData() {
         while (true) {
             try {
-                if (running === false) return;
                 let dataRes = await fetch(postUrl, {
                     method: "POST",
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        online: true
+                        online: running
                     })
-                }).catch(err => err)
+                }).catch(err => console.log(err))
                 let json = await dataRes.json();
                 if (json.status === "new-code") {
                     fetch(postUrl, {
@@ -144,7 +146,7 @@ async function main() {
                     await downloadFile(`${postUrl.slice(0, -129)}/cdn/servers/${postUrl.slice(-109)}.zip`, __dirname + "/temp.zip")
                     console.log("Download complete")
                     if (running === true) {
-                        child.kill();
+                        child.kill("SIGKILL");
                     }
                     console.log("Deleting old code...")
                     fs.rmdirSync("./code", { recursive: true });
@@ -159,7 +161,7 @@ async function main() {
                         }
                       });
                     if (running === true) {
-                        child.kill();
+                        child.kill("SIGKILL");
                     }
                     return restartProcess();
                 } else {
@@ -183,8 +185,14 @@ function sleep(ms) {
 }
 async function restartProcess() {
     if (running === true) {
-        child.kill();
+        child.kill("SIGKILL");
     }
+    try{
+        child_process.execSync("lsof -i :8888 -sTCP:LISTEN |awk 'NR > 1 {print $2}'  |xargs kill -15")
+    }catch(err){
+        
+    }
+
     console.log("Restarting process due to code changes...")
     await sleep(1000)
     main();

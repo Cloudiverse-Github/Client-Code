@@ -11,4 +11,8 @@ RUN npm install
 
 RUN ln -s /usr/local/bin/nodejs /usr/bin/node
 
+RUN apt update
+
+RUN apt-get install lsof
+
 CMD ["npm", "start"]
