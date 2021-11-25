@@ -7,7 +7,7 @@
         "start": "node index.js"
     },
     "dependencies": {
-        "file-system": "2.2.2",
+        "fs-extra": "10.0.0",
         "node-fetch": "2.6.5",
         "colors": "1.4.0",
         "extract-zip": "2.0.1"

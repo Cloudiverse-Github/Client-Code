@@ -1,11 +1,51 @@
+const fs = require('fs-extra')
+const fetch = require('node-fetch');
+const postUrl = require("./package.json").homepage;
+const extract = require('extract-zip')
+const child_process = require('child_process');
+var running = false;
+var child
+
+// things to do:
+// 1. make the console.log function post to the server
+var log = console.log
+var error = console.error
+console.log = function(){
+    log(arguments)
+    var text = "";
+    Array.prototype.slice.call(arguments).forEach(arg => {
+        if (typeof arg === "object") arg = JSON.stringify(arg);
+        text += arg.toString() + " "
+    })
+    fetch(postUrl, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            newLog: text,
+            time: Date.now()
+        })
+    }).catch(err => err)
+}
+
+console.error = function(){
+    error(arguments)
+    var text = "";
+    Array.prototype.slice.call(arguments).forEach(arg => {
+        if (typeof arg === "object") arg = JSON.stringify(arg);
+        text += arg.toString() + " "
+    })
+    fetch(postUrl, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            newErr: text,
+            time: Date.now()
+        })
+    }).catch(err => err)
+}
+
 async function main() {
-    const fs = require("file-system")
-    const fetch = require('node-fetch');
-    const postUrl = require("./package.json").homepage;
-    const extract = require('extract-zip')
-    const child_process = require('child_process');
     var colors = require('colors/safe');
-    var running = true;
 
     var ip = await fetch("https://jsonip.com/")
     ip = await ip.json();
@@ -35,9 +75,10 @@ async function main() {
         }).catch(err => err)
     }else{
 
-        const child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
+        child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
             env: environmentalVariables.query.environmentalVariables
         });
+        running = true;
         child.stdout.on('data', (data) => {
             console.log(colors.blue(data));
             fetch(postUrl, {
@@ -85,20 +126,38 @@ async function main() {
                     })
                 }).catch(err => err)
                 let json = await dataRes.json();
-                if (json.newCode) {
+                if (json.status === "new-code") {
+                    fetch(postUrl, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            docAction: "recieved-new-code",
+                            time: Date.now()
+                        })
+                    }).catch(err => err)
                     console.log("Remote has changes! Fetching changes...")
-
+                    console.log(`Downloading file at: ${postUrl.slice(0, -129)}/cdn/servers/${postUrl.slice(-109)}.zip`)
                     try {
                         fs.unlinkSync("./temp.zip")
                     } catch (err) { }
 
-                    await downloadFile(json.newCode, __dirname + "/temp.zip")
+                    await downloadFile(`${postUrl.slice(0, -129)}/cdn/servers/${postUrl.slice(-109)}.zip`, __dirname + "/temp.zip")
+                    console.log("Download complete")
                     if (running === true) {
                         child.kill();
                     }
+                    console.log("Deleting old code...")
                     fs.rmdirSync("./code", { recursive: true });
                     console.log("Extracting files...")
-                    await extract("./temp.zip", { dir: __dirname + "/code" });
+                    await extract("./temp.zip", { dir: __dirname + "/temp-extracted" });
+                    let directory = fs.readdirSync("./temp-extracted/");
+                    fs.moveSync("./temp-extracted/"+directory[0], "./code", function (err) {
+                        if (err) {                 
+                          console.error(err);      
+                        } else {
+                          console.log("Moved folders successfully!");
+                        }
+                      });
                     if (running === true) {
                         child.kill();
                     }
@@ -123,6 +182,9 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 async function restartProcess() {
+    if (running === true) {
+        child.kill();
+    }
     console.log("Restarting process due to code changes...")
     await sleep(1000)
     main();
