@@ -10,7 +10,8 @@
         "fs-extra": "10.0.0",
         "node-fetch": "2.6.5",
         "colors": "1.4.0",
-        "extract-zip": "2.0.1"
+        "extract-zip": "2.0.1",
+        "pidusage": "3.0.0"
     },
     "homepage": "http://host.docker.internal:3000/api/v1/dump-status/rTrnvbrURq-wxUTkLPnzv-2k0FDQUezt-wAGjc6vi2d-xmb752vJIE-Cqo23DG6kE-P4ssfc9Wjj-oWC7toVES6-q6VAOTkvLD-CNl8Q0GlN6",
     "engines": {

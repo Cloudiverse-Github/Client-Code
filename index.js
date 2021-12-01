@@ -3,6 +3,8 @@ const fetch = require('node-fetch');
 const postUrl = require("./package.json").homepage;
 const extract = require('extract-zip')
 const child_process = require('child_process');
+let pidusage = require('pidusage');
+
 var running = false;
 var child
 
@@ -120,11 +122,20 @@ async function main() {
     async function postData() {
         while (true) {
             try {
+                let currentResources = {
+                    cpu: 0,
+                    memory: 0
+                }
+                if (child.pid && running === true) {
+                    currentResources = await pidusage(child.pid);
+                    console.log(currentResources)
+                }
                 let dataRes = await fetch(postUrl, {
                     method: "POST",
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        online: running
+                        online: running,
+                        resources: currentResources
                     })
                 }).catch(err => console.log(err))
                 let json = await dataRes.json();
@@ -206,11 +217,3 @@ const downloadFile = (async (url, path) => {
         fileStream.on("finish", resolve);
     });
 });
-
-
-// FLOW CHART
-/*
-child_process.exec("cd node; npm start").stderr.on("data", (data) => console.log(data))
-
-
-*/
