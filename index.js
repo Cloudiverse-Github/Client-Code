@@ -9,9 +9,8 @@ var running = false;
 var child
 
 // things to do:
-// 1. Fix the error occurs when people redeploy the code (port is in use)
-// the reason for this, is when the child is killed, it sometimes doesn't decompose and free up resources
-// i added the .kill("SIGKILL") thing, but haven't tested it yet
+// 
+// put npm i commands in try catch stuff
 var log = console.log
 var error = console.error
 console.log = function(){
@@ -67,9 +66,15 @@ async function main() {
     })
     environmentalVariables = await environmentalVariables.json();
     // installing dependencies
-    child_process.execSync("npm --prefix ./code install")
+    var stop = false;
+    try {
+        child_process.execSync("npm --prefix ./code install")
+    }catch(err){
+        console.error(err.toString())
+        stop = true
+    }
     // running client code
-    if ((environmentalVariables.query.runCmd || "npm run start").includes("../")) {
+    if ((environmentalVariables.query.runCmd || "npm run start").includes("../") || stop === true) {
         fetch(postUrl, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
@@ -85,26 +90,10 @@ async function main() {
         });
         running = true;
         child.stdout.on('data', (data) => {
-            console.log(colors.blue(data));
-            fetch(postUrl, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    newLog: data,
-                    time: Date.now()
-                })
-            }).catch(err => err)
+            console.log(data);
         });
         child.stderr.on('data', (data) => {
-            console.log(colors.red(data));
-            fetch(postUrl, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    newErr: data,
-                    time: Date.now()
-                })
-            }).catch(err => err)
+            console.log(data);
         });
         child.on('close', async (code) => {
             running = false;
@@ -128,7 +117,6 @@ async function main() {
                 }
                 if (child.pid && running === true) {
                     currentResources = await pidusage(child.pid);
-                    console.log(currentResources)
                 }
                 let dataRes = await fetch(postUrl, {
                     method: "POST",
@@ -139,6 +127,30 @@ async function main() {
                     })
                 }).catch(err => console.log(err))
                 let json = await dataRes.json();
+                log(json)
+                if (json.query && json.query.runCmd) {
+                    fetch(postUrl, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            docAction: "executed-runcmd",
+                            time: Date.now()
+                        })
+                    })
+                    try {
+                        runChild = child_process.exec("cd code; "+json.query.runCmd, {
+                            env: environmentalVariables.query.environmentalVariables
+                        });
+                        runChild.stdout.on('data', (data) => {
+                            console.log(data);
+                        });
+                        runChild.stderr.on('data', (data) => {
+                            console.log(data);
+                        });
+                    }catch(err){
+                        console.log(err.toString())
+                    }
+                }
                 if (json.status === "new-code") {
                     fetch(postUrl, {
                         method: "POST",
@@ -149,7 +161,7 @@ async function main() {
                         })
                     }).catch(err => err)
                     console.log("Remote has changes! Fetching changes...")
-                    console.log(`Downloading file at: ${postUrl.slice(0, -129)}/cdn/servers/${postUrl.slice(-109)}.zip`)
+                    console.log(`Downloading file at: ${postUrl.slice(0, -129)}/cdn/servers/--------------------------------------.zip`)
                     try {
                         fs.unlinkSync("./temp.zip")
                     } catch (err) { }
