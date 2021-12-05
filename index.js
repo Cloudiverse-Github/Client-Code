@@ -68,7 +68,7 @@ async function main() {
     // installing dependencies
     var stop = false;
     try {
-        child_process.execSync("npm --prefix ./code install")
+        child_process.execSync("cd code; npm install")
     }catch(err){
         console.error(err.toString())
         stop = true
@@ -84,7 +84,11 @@ async function main() {
             })
         }).catch(err => err)
     }else{
-
+        child_process.exec("npm --prefix ./code list", (err, stdout, stderr) => {
+            console.log(`stdout: ${stdout}`);
+        })
+        environmentalVariables.query.environmentalVariables.PORT = 8888
+        
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
             env: environmentalVariables.query.environmentalVariables
         });
@@ -115,8 +119,12 @@ async function main() {
                     cpu: 0,
                     memory: 0
                 }
-                if (child.pid && running === true) {
-                    currentResources = await pidusage(child.pid);
+                if (running === true && child.pid) {
+                    try {
+                        currentResources = await pidusage(child.pid);
+                    }catch(err) {
+                        currentResources = {cpu: 0, memory: 0}
+                    }
                 }
                 let dataRes = await fetch(postUrl, {
                     method: "POST",
@@ -196,13 +204,6 @@ async function main() {
         }
     }
 }
-
-
-
-
-
-
-main();
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -229,3 +230,13 @@ const downloadFile = (async (url, path) => {
         fileStream.on("finish", resolve);
     });
 });
+process()
+async function process(){
+    
+initialize()
+main();
+}
+async function initialize(){
+    console.log("Initializing...")
+    fetch(postUrl.replace("/api/v1/dump-status/", "/api/v1/user/deploy/")+"?source=server")
+}
