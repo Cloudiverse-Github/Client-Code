@@ -68,7 +68,8 @@ async function main() {
     // installing dependencies
     var stop = false;
     try {
-        child_process.execSync("cd code; npm install")
+        child_process.execSync("cd code; rm -rf node_modules")
+        child_process.execSync("cd code; npm install --force")
     }catch(err){
         console.error(err.toString())
         stop = true
@@ -84,9 +85,6 @@ async function main() {
             })
         }).catch(err => err)
     }else{
-        child_process.exec("npm --prefix ./code list", (err, stdout, stderr) => {
-            console.log(`stdout: ${stdout}`);
-        })
         environmentalVariables.query.environmentalVariables.PORT = 8888
         
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {

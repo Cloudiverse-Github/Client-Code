@@ -15,4 +15,4 @@ RUN apt update
 
 RUN apt-get install lsof
 
-CMD ["npm", "start"]
+CMD ["node", "index.js"]
