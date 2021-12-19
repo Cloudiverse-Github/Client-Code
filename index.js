@@ -85,6 +85,9 @@ async function main() {
             })
         }).catch(err => err)
     }else{
+        if (!environmentalVariables.query.environmentalVariables) {
+            environmentalVariables.query.environmentalVariables = {}
+        }
         environmentalVariables.query.environmentalVariables.PORT = 8888
         
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
