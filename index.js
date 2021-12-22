@@ -89,7 +89,29 @@ async function main() {
             environmentalVariables.query.environmentalVariables = {}
         }
         environmentalVariables.query.environmentalVariables.PORT = 8888
-        
+        try {
+            let jsonfile = fs.readFileSync("./code/package.json");
+            jsonfile = JSON.parse(jsonfile);
+            var nonCustom = ["node", "cd", "ls", "npx", "npm"]
+            Object.entries(jsonfile.scripts).forEach(([key, value]) => {
+                let allCmds = value.split(";");
+                for (let i = 0; i<allCmds.length; i++){
+                    var add = true;
+                    for (let p = 0; p<nonCustom.length; p++){
+                        if (allCmds[i].trimStart().startsWith(nonCustom[p])) {
+                            add = false;
+                        }
+                    }
+                    if (add === true) {
+                        allCmds[i] = "npx --no-install "+allCmds[i].trimStart();
+                    }
+                }
+                allCmds = allCmds.join("; ");
+                jsonfile.scripts[key] = allCmds;
+            })
+        }catch(err) {
+            console.log(err)
+        }
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
             env: environmentalVariables.query.environmentalVariables
         });
