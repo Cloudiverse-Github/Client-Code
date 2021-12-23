@@ -14,7 +14,7 @@ var child
 var log = console.log
 var error = console.error
 console.log = function(){
-    log(arguments)
+    log.apply(null, arguments);
     var text = "";
     Array.prototype.slice.call(arguments).forEach(arg => {
         if (typeof arg === "object") arg = JSON.stringify(arg);
@@ -31,8 +31,7 @@ console.log = function(){
 }
 
 console.error = function(){
-    error(arguments)
-    log("This was an error")
+    error.apply(null, arguments);
     var text = "";
     Array.prototype.slice.call(arguments).forEach(arg => {
         if (typeof arg === "object") arg = JSON.stringify(arg);
@@ -90,7 +89,7 @@ async function main() {
         }
         environmentalVariables.query.environmentalVariables.PORT = 8888
         try {
-            let jsonfile = fs.readFileSync("./code/package.json");
+            let jsonfile = fs.readFileSync("./code/package.json").toString()
             jsonfile = JSON.parse(jsonfile);
             var nonCustom = ["node", "cd", "ls", "npx", "npm"]
             Object.entries(jsonfile.scripts).forEach(([key, value]) => {
@@ -109,8 +108,9 @@ async function main() {
                 allCmds = allCmds.join("; ");
                 jsonfile.scripts[key] = allCmds;
             })
+            fs.writeFileSync("./code/package.json", JSON.stringify(jsonfile))
         }catch(err) {
-            console.log(err)
+            //console.log(err)
         }
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
             env: environmentalVariables.query.environmentalVariables
