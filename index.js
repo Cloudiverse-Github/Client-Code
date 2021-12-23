@@ -13,7 +13,7 @@ var child
 // put npm i commands in try catch stuff
 var log = console.log
 var error = console.error
-console.log = function(){
+console.log = function () {
     log.apply(null, arguments);
     var text = "";
     Array.prototype.slice.call(arguments).forEach(arg => {
@@ -30,7 +30,7 @@ console.log = function(){
     }).catch(err => err)
 }
 
-console.error = function(){
+console.error = function () {
     error.apply(null, arguments);
     var text = "";
     Array.prototype.slice.call(arguments).forEach(arg => {
@@ -69,7 +69,7 @@ async function main() {
     try {
         child_process.execSync("cd code; rm -rf node_modules")
         child_process.execSync("cd code; npm install --force")
-    }catch(err){
+    } catch (err) {
         console.error(err.toString())
         stop = true
     }
@@ -83,7 +83,7 @@ async function main() {
                 time: Date.now()
             })
         }).catch(err => err)
-    }else{
+    } else {
         if (!environmentalVariables.query.environmentalVariables) {
             environmentalVariables.query.environmentalVariables = {}
         }
@@ -93,23 +93,25 @@ async function main() {
             jsonfile = JSON.parse(jsonfile);
             var nonCustom = ["node", "cd", "ls", "npx", "npm"]
             Object.entries(jsonfile.scripts).forEach(([key, value]) => {
-                let allCmds = value.split(";");
-                for (let i = 0; i<allCmds.length; i++){
-                    var add = true;
-                    for (let p = 0; p<nonCustom.length; p++){
-                        if (allCmds[i].trimStart().startsWith(nonCustom[p])) {
-                            add = false;
+                if (value !== undefined) {
+                    let allCmds = value.split(";");
+                    for (let i = 0; i < allCmds.length; i++) {
+                        var add = true;
+                        for (let p = 0; p < nonCustom.length; p++) {
+                            if (allCmds[i].trimStart().startsWith(nonCustom[p])) {
+                                add = false;
+                            }
+                        }
+                        if (add === true) {
+                            allCmds[i] = "npx --no-install " + allCmds[i].trimStart();
                         }
                     }
-                    if (add === true) {
-                        allCmds[i] = "npx --no-install "+allCmds[i].trimStart();
-                    }
+                    allCmds = allCmds.join("; ");
+                    jsonfile.scripts[key] = allCmds;
                 }
-                allCmds = allCmds.join("; ");
-                jsonfile.scripts[key] = allCmds;
             })
             fs.writeFileSync("./code/package.json", JSON.stringify(jsonfile))
-        }catch(err) {
+        } catch (err) {
             //console.log(err)
         }
         child = child_process.exec(`cd code; ${environmentalVariables.query.runCmd || "npm run start"}`, {
@@ -132,7 +134,7 @@ async function main() {
                 })
             }).catch(err => err)
             console.log(colors.bold.red(`Child process exited with code ${code}`));
-        });    
+        });
     }
     postData();
     async function postData() {
@@ -145,8 +147,8 @@ async function main() {
                 if (running === true && child.pid) {
                     try {
                         currentResources = await pidusage(child.pid);
-                    }catch(err) {
-                        currentResources = {cpu: 0, memory: 0}
+                    } catch (err) {
+                        currentResources = { cpu: 0, memory: 0 }
                     }
                 }
                 let dataRes = await fetch(postUrl, {
@@ -169,7 +171,7 @@ async function main() {
                         })
                     })
                     try {
-                        runChild = child_process.exec("cd code; "+json.query.runCmd, {
+                        runChild = child_process.exec("cd code; " + json.query.runCmd, {
                             env: environmentalVariables.query.environmentalVariables
                         });
                         runChild.stdout.on('data', (data) => {
@@ -178,7 +180,7 @@ async function main() {
                         runChild.stderr.on('data', (data) => {
                             console.log(data);
                         });
-                    }catch(err){
+                    } catch (err) {
                         console.log(err.toString())
                     }
                 }
@@ -207,13 +209,13 @@ async function main() {
                     console.log("Extracting files...")
                     await extract("./temp.zip", { dir: __dirname + "/temp-extracted" });
                     let directory = fs.readdirSync("./temp-extracted/");
-                    fs.moveSync("./temp-extracted/"+directory[0], "./code", function (err) {
-                        if (err) {                 
-                          console.error(err);      
+                    fs.moveSync("./temp-extracted/" + directory[0], "./code", function (err) {
+                        if (err) {
+                            console.error(err);
                         } else {
-                          console.log("Moved folders successfully!");
+                            console.log("Moved folders successfully!");
                         }
-                      });
+                    });
                     if (running === true) {
                         child.kill("SIGKILL");
                     }
@@ -221,8 +223,8 @@ async function main() {
                 } else {
                     await sleep(60000)
                 }
-            }catch(err){
-                console.log("We had trouble posting to the cloudiverse servers! Please check your internet connection. Processes will continue running. \n Full error string: "+err.toString())
+            } catch (err) {
+                console.log("We had trouble posting to the cloudiverse servers! Please check your internet connection. Processes will continue running. \n Full error string: " + err.toString())
             }
         }
     }
@@ -234,10 +236,10 @@ async function restartProcess() {
     if (running === true) {
         child.kill("SIGKILL");
     }
-    try{
+    try {
         child_process.execSync("lsof -i :8888 -sTCP:LISTEN |awk 'NR > 1 {print $2}'  |xargs kill -15")
-    }catch(err){
-        
+    } catch (err) {
+
     }
 
     console.log("Restarting process due to code changes...")
@@ -254,12 +256,12 @@ const downloadFile = (async (url, path) => {
     });
 });
 process()
-async function process(){
-    
-initialize()
-main();
+async function process() {
+
+    initialize()
+    main();
 }
-async function initialize(){
+async function initialize() {
     console.log("Initializing...")
-    fetch(postUrl.replace("/api/v1/dump-status/", "/api/v1/user/deploy/")+"?source=server")
+    fetch(postUrl.replace("/api/v1/dump-status/", "/api/v1/user/deploy/") + "?source=server")
 }
